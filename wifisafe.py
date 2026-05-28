@@ -12,10 +12,13 @@
     python3 wifisafe.py            # человекочитаемый отчёт
     python3 wifisafe.py --json     # машинный вывод (для дашборда/SaaS)
     python3 wifisafe.py --no-network  # без активных проб (captive/TLS/админка)
+    python3 wifisafe.py --check-default-creds  # проверка заводского пароля СВОЕГО роутера
 """
 from __future__ import annotations
 
 import argparse
+import base64
+import ipaddress
 import json
 import platform
 import re
@@ -23,12 +26,38 @@ import socket
 import ssl
 import subprocess
 import sys
+import time
 from dataclasses import dataclass, field, asdict
 
 # Уровни серьёзности по возрастанию веса для итогового вердикта.
 OK, INFO, UNKNOWN, WARN, RISK, CRITICAL = "OK", "INFO", "UNKNOWN", "WARN", "RISK", "CRITICAL"
 SEVERITY_WEIGHT = {OK: 0, INFO: 0, UNKNOWN: 1, WARN: 2, RISK: 3, CRITICAL: 4}
 SEVERITY_ICON = {OK: "🟢", INFO: "ℹ️", UNKNOWN: "⚪", WARN: "🟡", RISK: "🟠", CRITICAL: "🔴"}
+
+# Документированные ЗАВОДСКИЕ пары логин/пароль по вендорам (не брутфорс-словарь).
+# Используются только для проверки СВОЕГО роутера на «учётки не сменили».
+DEFAULT_CREDS = {
+    "TP-Link":    [("admin", "admin")],
+    "D-Link":     [("admin", ""), ("admin", "admin"), ("Admin", "")],
+    "Netgear":    [("admin", "password"), ("admin", "1234")],
+    "Linksys":    [("admin", "admin"), ("", "admin")],
+    "ASUS":       [("admin", "admin")],
+    "Zyxel":      [("admin", "1234"), ("admin", "admin")],
+    "Huawei":     [("admin", "admin"), ("telecomadmin", "admintelecom"), ("root", "admin")],
+    "MikroTik":   [("admin", "")],
+    "Tenda":      [("admin", "admin")],
+    "Keenetic":   [("admin", "admin"), ("admin", "1234")],
+    "Ubiquiti":   [("ubnt", "ubnt")],
+    "Cisco":      [("cisco", "cisco"), ("admin", "admin")],
+    "Rostelecom": [("admin", "admin"), ("admin", "admin1")],
+}
+# Если вендор не определён — небольшой набор самых частых заводских пар.
+GENERIC_DEFAULTS = [("admin", "admin"), ("admin", "password"), ("admin", ""),
+                    ("admin", "1234"), ("root", "admin"), ("user", "user")]
+
+# Частичная таблица OUI → вендор (расширяемая). Префикс в нижнем регистре "xx:xx:xx".
+# Основной сигнал определения — HTTP-фингерпринт; OUI лишь вспомогательный.
+OUI_VENDORS: dict[str, str] = {}
 
 
 @dataclass
@@ -162,9 +191,115 @@ def tls_intercepted() -> bool | None:
         return None
 
 
+# --------------------------- проверка заводского пароля ---------------------------
+
+def mac_for_ip(dev: str, ip: str) -> str:
+    for ln in run(["arp", "-a"]).splitlines():
+        m = re.search(r"\(([\d.]+)\) at ([0-9a-fA-F:]+) on (\w+)", ln)
+        if m and m.group(1) == ip and m.group(3) == dev and "incomplete" not in m.group(2):
+            return m.group(2)
+    return ""
+
+
+def http_probe(url: str, timeout: int = 5, auth: tuple[str, str] | None = None):
+    """Возвращает (code, headers, body) или (None, {}, "") при ошибке соединения."""
+    import urllib.request
+    import urllib.error
+    req = urllib.request.Request(url)
+    if auth is not None:
+        token = base64.b64encode(f"{auth[0]}:{auth[1]}".encode()).decode()
+        req.add_header("Authorization", "Basic " + token)
+    ctx = ssl._create_unverified_context()
+    try:
+        resp = urllib.request.urlopen(req, timeout=timeout, context=ctx)
+        return resp.status, dict(resp.headers), resp.read(4096).decode("utf-8", "ignore")
+    except urllib.error.HTTPError as e:
+        try:
+            body = e.read(4096).decode("utf-8", "ignore")
+        except Exception:
+            body = ""
+        return e.code, dict(e.headers), body
+    except Exception:
+        return None, {}, ""
+
+
+def fingerprint_vendor(headers: dict, body: str, mac: str) -> tuple[str | None, str]:
+    title = ""
+    m = re.search(r"<title>(.*?)</title>", body, re.I | re.S)
+    if m:
+        title = m.group(1).strip()
+    hay = " ".join([headers.get("Server", ""), headers.get("WWW-Authenticate", ""),
+                    headers.get("Set-Cookie", ""), title, body[:2000]]).lower()
+    for vendor in DEFAULT_CREDS:
+        if vendor.lower() in hay:
+            return vendor, title
+    if mac:
+        v = OUI_VENDORS.get(":".join(mac.lower().split(":")[:3]))
+        if v:
+            return v, title
+    return None, title
+
+
+def check_default_credentials(gateway: str, mac: str,
+                              max_attempts: int = 8, delay: float = 1.0) -> Finding:
+    """Проверяет ТОЛЬКО локальный шлюз на заводские учётные данные. Opt-in."""
+    if not gateway:
+        return Finding("default_creds", "Дефолтный пароль роутера", UNKNOWN,
+                       "Адрес шлюза не определён — проверить нельзя.")
+    try:
+        if not ipaddress.ip_address(gateway).is_private:
+            return Finding("default_creds", "Дефолтный пароль роутера", UNKNOWN,
+                           f"Шлюз {gateway} не из приватного диапазона — проверка пропущена "
+                           "(тестируем только собственную локальную сеть).")
+    except ValueError:
+        return Finding("default_creds", "Дефолтный пароль роутера", UNKNOWN,
+                       f"Некорректный адрес шлюза: {gateway!r}.")
+
+    base = headers = body = None
+    for scheme in ("http", "https"):
+        code, headers, body = http_probe(f"{scheme}://{gateway}/")
+        if code is not None:
+            base = f"{scheme}://{gateway}/"
+            break
+    if base is None:
+        return Finding("default_creds", "Дефолтный пароль роутера", UNKNOWN,
+                       "Веб-интерфейс роутера из этой сети недоступен — автопроверку выполнить нельзя.")
+
+    vendor, _ = fingerprint_vendor(headers, body, mac)
+    creds = DEFAULT_CREDS.get(vendor, GENERIC_DEFAULTS)
+    vname = vendor or "модель не определена"
+
+    if "basic" in headers.get("WWW-Authenticate", "").lower():
+        # Basic-Auth: подтверждаем фактическим входом — надёжно, без ложных выводов.
+        attempts = 0
+        for user, pw in creds:
+            if attempts >= max_attempts:
+                break
+            attempts += 1
+            code, _, _ = http_probe(base, auth=(user, pw))
+            time.sleep(delay)
+            if code in (200, 301, 302, 303):
+                shown = f"{user or '(пусто)'}/{pw or '(пусто)'}"
+                return Finding("default_creds", "Дефолтный пароль роутера", CRITICAL,
+                               f"Роутер ({vname}) ПРИНИМАЕТ заводские учётные данные {shown} "
+                               "(HTTP Basic). Доступ к админке фактически открыт.",
+                               "Сменить пароль администратора немедленно. Это документируемая "
+                               "недоработка подрядчика (учётки по умолчанию не изменены).")
+        return Finding("default_creds", "Дефолтный пароль роутера", OK,
+                       f"Заводские пары для «{vname}» (HTTP Basic) не подошли — пароль, похоже, изменён.")
+
+    # Form-login: автотест ненадёжен между моделями → не делаем, чтобы не обвинить зря.
+    vlist = ", ".join(f"{u or '(пусто)'}/{p or '(пусто)'}" for u, p in creds)
+    return Finding("default_creds", "Дефолтный пароль роутера", WARN,
+                   f"Роутер ({vname}) использует форму входа, а не HTTP Basic. Автопроверку "
+                   "form-login не выполняем во избежание ложных выводов. "
+                   f"Заводские пары для ручной проверки: {vlist}.",
+                   "Если любая пара подходит — сменить пароль и зафиксировать как недоработку подрядчика.")
+
+
 # --------------------------- логика проверок ---------------------------
 
-def build_report(do_network: bool) -> Report:
+def build_report(do_network: bool, check_creds: bool = False) -> Report:
     rep = Report(platform=platform.platform())
 
     if platform.system() != "Darwin":
@@ -236,6 +371,10 @@ def build_report(do_network: bool) -> Report:
         rep.add(key="dns", title="DNS-резолвер", severity=INFO,
                 detail=f"DHCP выдал DNS: {dns}. Явных признаков подмены нет "
                        "(для глубокой проверки нужен тест резолвинга известных доменов).")
+
+    # 5b. Заводской пароль роутера (opt-in, активная проверка собственного устройства)
+    if check_creds:
+        rep.findings.append(check_default_credentials(gateway, mac_for_ip(dev, gateway)))
 
     if not do_network:
         rep.add(key="network_probes", title="Активные пробы", severity=INFO,
@@ -331,9 +470,17 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Насколько безопасен этот Wi-Fi? (пассивная диагностика)")
     ap.add_argument("--json", action="store_true", help="машинный вывод JSON")
     ap.add_argument("--no-network", action="store_true", help="без активных проб (captive/TLS/админка)")
+    ap.add_argument("--check-default-creds", action="store_true",
+                    help="проверить локальный роутер на ЗАВОДСКОЙ пароль (только для своего устройства)")
     args = ap.parse_args(argv)
 
-    rep = build_report(do_network=not args.no_network)
+    if args.check_default_creds and not args.json:
+        print("  ! Проверка заводского пароля тестирует ТОЛЬКО ваш локальный роутер.\n"
+              "    Запускайте лишь на сети, которой вы владеете/управляете. Возможна\n"
+              "    временная блокировка входа на роутере при нескольких попытках.",
+              file=sys.stderr)
+
+    rep = build_report(do_network=not args.no_network, check_creds=args.check_default_creds)
     print(render_json(rep) if args.json else render_human(rep))
     return SEVERITY_WEIGHT[rep.worst]  # ненулевой код = есть на что обратить внимание
 
