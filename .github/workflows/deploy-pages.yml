@@ -3,6 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
+      - main
       - claude/korea-car-import-calculator-oe0h18
   workflow_dispatch:
 
