@@ -8,12 +8,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script>
         tailwind.config = {
-            theme: {
-                extend: {
-                    colors: { primary: '#0F172A', accent: '#6366F1', accent2: '#0EA5E9' },
-                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
-                }
-            }
+            theme: { extend: {
+                colors: { primary: '#0F172A', accent: '#6366F1', accent2: '#0EA5E9' },
+                fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+            } }
         }
     </script>
     <style>
@@ -24,38 +22,42 @@
         .num-input { -moz-appearance: textfield; }
         details > summary { list-style: none; cursor: pointer; }
         details > summary::-webkit-details-marker { display: none; }
-        .fade-in { animation: fade .25s ease; }
-        @keyframes fade { from { opacity: 0; transform: translateY(4px);} to {opacity:1;transform:none;} }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-full">
 
 <div class="max-w-3xl mx-auto px-4 py-6 sm:py-10">
 
-    <!-- Header -->
-    <header class="mb-6">
+    <header class="mb-5">
         <div class="flex items-center gap-3">
             <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-accent to-accent2 flex items-center justify-center text-white text-xl shadow-lg shadow-indigo-200">
                 <i class="fa-solid fa-car-side"></i>
             </div>
             <div>
                 <h1 class="text-xl sm:text-2xl font-extrabold text-primary leading-tight">Растаможка авто из Кореи 🇰🇷 → Беларусь 🇧🇾</h1>
-                <p class="text-sm text-slate-500">Расчёт таможенных и сопутствующих платежей (ЕАЭС, для физлиц)</p>
+                <p class="text-sm text-slate-500">Таможенные и сопутствующие платежи · единые ставки ЕАЭС для физлиц</p>
             </div>
         </div>
     </header>
 
+    <!-- Статус курсов -->
+    <div id="ratesBar" class="mb-5 flex items-center justify-between gap-3 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm">
+        <span id="ratesStatus" class="text-slate-500 flex items-center gap-2">
+            <i class="fa-solid fa-circle-notch fa-spin text-accent"></i> Загрузка курсов валют…
+        </span>
+        <button id="refreshRates" class="text-accent font-medium hover:underline flex items-center gap-1 shrink-0">
+            <i class="fa-solid fa-rotate"></i> Обновить
+        </button>
+    </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-5">
 
-        <!-- ====== ЛЕВАЯ КОЛОНКА: ВВОД ====== -->
+        <!-- ВВОД -->
         <div class="lg:col-span-3 space-y-5">
 
-            <!-- Блок: Авто -->
             <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
                 <h2 class="font-bold text-primary mb-4 flex items-center gap-2"><i class="fa-solid fa-car text-accent"></i> Параметры автомобиля</h2>
-
                 <div class="space-y-4">
-                    <!-- Цена -->
                     <div>
                         <label class="block text-sm font-medium text-slate-600 mb-1">Цена авто в Корее, млн вон (₩)</label>
                         <div class="relative">
@@ -65,7 +67,6 @@
                         <p id="wonHint" class="text-xs text-slate-400 mt-1"></p>
                     </div>
 
-                    <!-- Дата выпуска -->
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-sm font-medium text-slate-600 mb-1">Месяц выпуска</label>
@@ -83,7 +84,6 @@
                     </div>
                     <p id="ageHint" class="text-xs font-medium text-accent2 -mt-2"></p>
 
-                    <!-- Тип двигателя -->
                     <div>
                         <label class="block text-sm font-medium text-slate-600 mb-1">Тип двигателя</label>
                         <div id="fuelTabs" class="grid grid-cols-4 gap-2">
@@ -94,7 +94,6 @@
                         </div>
                     </div>
 
-                    <!-- Объём и мощность -->
                     <div class="grid grid-cols-2 gap-3">
                         <div id="volumeWrap">
                             <label class="block text-sm font-medium text-slate-600 mb-1">Объём двигателя, см³</label>
@@ -108,7 +107,6 @@
                 </div>
             </section>
 
-            <!-- Блок: Доставка и доп. расходы -->
             <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
                 <h2 class="font-bold text-primary mb-4 flex items-center gap-2"><i class="fa-solid fa-ship text-accent"></i> Доставка и услуги</h2>
                 <div class="grid grid-cols-2 gap-3">
@@ -127,8 +125,7 @@
                 </label>
             </section>
 
-            <!-- Блок: Курсы валют (настройки) -->
-            <details class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5" open>
+            <details class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
                 <summary class="font-bold text-primary flex items-center justify-between">
                     <span class="flex items-center gap-2"><i class="fa-solid fa-coins text-accent"></i> Курсы валют</span>
                     <i class="fa-solid fa-chevron-down text-slate-400 text-sm"></i>
@@ -147,42 +144,43 @@
                         <input id="bynPerEur" type="number" value="3.5" step="0.01" class="num-input w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-accent outline-none">
                     </div>
                 </div>
-                <p class="text-xs text-slate-400 mt-2"><i class="fa-solid fa-circle-info"></i> Курсы примерные — подставьте актуальные на дату расчёта.</p>
+                <p class="text-xs text-slate-400 mt-2"><i class="fa-solid fa-circle-info"></i> Подгружаются автоматически. Можно ввести вручную — расчёт пересчитается.</p>
             </details>
 
-            <!-- Блок: Ставки и сборы (настройки) -->
             <details class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
                 <summary class="font-bold text-primary flex items-center justify-between">
-                    <span class="flex items-center gap-2"><i class="fa-solid fa-sliders text-accent"></i> Доп. сборы (можно править)</span>
+                    <span class="flex items-center gap-2"><i class="fa-solid fa-sliders text-accent"></i> Ставки сборов РБ <span class="text-xs font-normal text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">актуальные 2026</span></span>
                     <i class="fa-solid fa-chevron-down text-slate-400 text-sm"></i>
                 </summary>
                 <div class="grid grid-cols-2 gap-3 mt-4">
                     <div>
-                        <label class="block text-xs font-medium text-slate-500 mb-1">Таможенный сбор за оформление, €</label>
-                        <input id="clearanceFee" type="number" value="60" class="num-input w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-accent outline-none">
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Утильсбор до 3 лет, BYN</label>
+                        <input id="utilNew" type="number" step="0.01" value="624.92" class="num-input w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-accent outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-slate-500 mb-1">Утилизационный сбор, €</label>
-                        <input id="utilFee" type="number" value="100" class="num-input w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-accent outline-none">
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Утильсбор старше 3 лет, BYN</label>
+                        <input id="utilOld" type="number" step="0.01" value="1282.02" class="num-input w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-accent outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Таможенный сбор за оформление, BYN</label>
+                        <input id="clearanceFee" type="number" step="0.01" value="120" class="num-input w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-accent outline-none">
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-slate-500 mb-1">Ставка пошлины для электро, %</label>
                         <input id="evRate" type="number" value="15" class="num-input w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-accent outline-none">
                     </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-500 mb-1">Прочие расходы (СВХ, госпошлина), €</label>
-                        <input id="otherFee" type="number" value="150" class="num-input w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-accent outline-none">
+                    <div class="col-span-2">
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Прочие расходы (СВХ, СБКТС, ЭПТС, услуги), €</label>
+                        <input id="otherFee" type="number" value="350" class="num-input w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-accent outline-none">
                     </div>
                 </div>
-                <p class="text-xs text-slate-400 mt-2"><i class="fa-solid fa-triangle-exclamation"></i> Утильсбор и сборы для физлиц в РБ зависят от ситуации — уточняйте актуальные значения.</p>
+                <p class="text-xs text-slate-400 mt-2"><i class="fa-solid fa-book"></i> Утильсбор для физлиц — фиксированный, по возрасту (Пост. Совмина РБ №195 от 23.04.2026). Пошлина — единые ставки ЕАЭС (с 01.2025).</p>
             </details>
         </div>
 
-        <!-- ====== ПРАВАЯ КОЛОНКА: РЕЗУЛЬТАТ ====== -->
+        <!-- РЕЗУЛЬТАТ -->
         <div class="lg:col-span-2">
             <div class="lg:sticky lg:top-6 space-y-5">
-
-                <!-- Итог -->
                 <section class="bg-gradient-to-br from-primary to-slate-800 text-white rounded-2xl shadow-xl p-5">
                     <p class="text-slate-300 text-sm mb-1">Итоговая стоимость «под ключ»</p>
                     <div class="flex items-end gap-2">
@@ -201,7 +199,6 @@
                     </div>
                 </section>
 
-                <!-- Детализация платежей -->
                 <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
                     <h2 class="font-bold text-primary mb-3 text-sm flex items-center gap-2"><i class="fa-solid fa-receipt text-accent"></i> Детализация (в €)</h2>
                     <div class="space-y-2 text-sm">
@@ -226,45 +223,25 @@
 </div>
 
 <script>
-// ===== Единые ставки таможенной пошлины ЕАЭС для физлиц (€/см³ и %) =====
-// Возраст: до 3 лет — % от стоимости (но не менее €/см³); 3–5 лет и старше 5 лет — €/см³.
-
-// Авто 3–5 лет: ставка €/см³ в зависимости от объёма
-const RATE_3_5 = [
-    { max: 1000, rate: 1.5 },
-    { max: 1500, rate: 1.7 },
-    { max: 1800, rate: 2.5 },
-    { max: 2300, rate: 2.7 },
-    { max: 3000, rate: 3.0 },
-    { max: Infinity, rate: 3.6 },
+// ===== Единые ставки таможенной пошлины ЕАЭС для физлиц (действуют с 01.01.2025) =====
+const RATE_3_5 = [ // 3–5 лет, €/см³
+    { max: 1000, rate: 1.5 }, { max: 1500, rate: 1.7 }, { max: 1800, rate: 2.5 },
+    { max: 2300, rate: 2.7 }, { max: 3000, rate: 3.0 }, { max: Infinity, rate: 3.6 },
 ];
-// Авто старше 5 лет: ставка €/см³
-const RATE_5PLUS = [
-    { max: 1000, rate: 3.0 },
-    { max: 1500, rate: 3.2 },
-    { max: 1800, rate: 3.5 },
-    { max: 2300, rate: 4.8 },
-    { max: 3000, rate: 5.0 },
-    { max: Infinity, rate: 5.7 },
+const RATE_5PLUS = [ // старше 5 лет, €/см³
+    { max: 1000, rate: 3.0 }, { max: 1500, rate: 3.2 }, { max: 1800, rate: 3.5 },
+    { max: 2300, rate: 4.8 }, { max: 3000, rate: 5.0 }, { max: Infinity, rate: 5.7 },
 ];
-// Авто до 3 лет: % от таможенной стоимости, но не менее €/см³ (по диапазонам стоимости в €)
-const RATE_NEW = [
-    { maxVal: 8500,   pct: 0.54, minPerCc: 2.5 },
-    { maxVal: 16700,  pct: 0.48, minPerCc: 3.5 },
-    { maxVal: 42300,  pct: 0.48, minPerCc: 5.5 },
-    { maxVal: 84500,  pct: 0.48, minPerCc: 7.5 },
-    { maxVal: 169000, pct: 0.48, minPerCc: 15 },
-    { maxVal: Infinity, pct: 0.48, minPerCc: 20 },
+const RATE_NEW = [ // до 3 лет: % от стоимости, но не менее €/см³
+    { maxVal: 8500,    pct: 0.54, minPerCc: 2.5 }, { maxVal: 16700,  pct: 0.48, minPerCc: 3.5 },
+    { maxVal: 42300,   pct: 0.48, minPerCc: 5.5 }, { maxVal: 84500,  pct: 0.48, minPerCc: 7.5 },
+    { maxVal: 169000,  pct: 0.48, minPerCc: 15 },  { maxVal: Infinity, pct: 0.48, minPerCc: 20 },
 ];
 
 let fuel = 'petrol';
-
 const $ = id => document.getElementById(id);
-const fmt = (n, d=0) => n.toLocaleString('ru-RU', { minimumFractionDigits: d, maximumFractionDigits: d });
-
-function pickRate(table, volume) {
-    return table.find(r => volume <= r.max).rate;
-}
+const fmt = (n, d=0) => (isFinite(n) ? n : 0).toLocaleString('ru-RU', { minimumFractionDigits: d, maximumFractionDigits: d });
+const pickRate = (table, v) => table.find(r => v <= r.max).rate;
 
 function setFuel(f) {
     fuel = f;
@@ -273,17 +250,15 @@ function setFuel(f) {
         b.className = 'fuel-btn rounded-xl border px-2 py-2 text-sm font-medium ' +
             (active ? 'bg-accent text-white border-accent shadow' : 'bg-white text-slate-600 border-slate-300 hover:border-accent');
     });
-    // Объём не нужен для электро
     $('volumeWrap').style.opacity = (f === 'electric') ? '0.4' : '1';
     $('volume').disabled = (f === 'electric');
     calc();
 }
 
 function carAge() {
-    const now = new Date(2026, 5, 28); // дата расчёта: 28.06.2026
+    const now = new Date();
     const made = new Date(parseInt($('year').value), parseInt($('month').value) - 1, 1);
-    const years = (now - made) / (365.25 * 24 * 3600 * 1000);
-    return Math.max(0, years);
+    return Math.max(0, (now - made) / (365.25 * 24 * 3600 * 1000));
 }
 
 function calc() {
@@ -291,21 +266,16 @@ function calc() {
     const rubPerEur = parseFloat($('rubPerEur').value) || 92;
     const bynPerEur = parseFloat($('bynPerEur').value) || 3.5;
 
-    const priceWon = (parseFloat($('priceWon').value) || 0) * 1_000_000;
-    const carEur = priceWon / wonPerEur;
-
+    const carEur = ((parseFloat($('priceWon').value) || 0) * 1_000_000) / wonPerEur;
     const shipping = parseFloat($('shipping').value) || 0;
     const broker = parseFloat($('broker').value) || 0;
     const logistics = shipping + broker;
-
     const includeShip = $('includeShippingInValue').checked;
     const volume = parseFloat($('volume').value) || 0;
     const age = carAge();
-
-    // Таможенная стоимость
     const customsValue = carEur + (includeShip ? shipping : 0);
 
-    // ===== Пошлина =====
+    // ===== Пошлина (€) =====
     let duty = 0, basis = '';
     if (fuel === 'electric') {
         const evRate = (parseFloat($('evRate').value) || 15) / 100;
@@ -313,22 +283,24 @@ function calc() {
         basis = `Электромобиль: ${(evRate*100).toFixed(0)}% от таможенной стоимости.`;
     } else if (age < 3) {
         const band = RATE_NEW.find(b => customsValue <= b.maxVal);
-        const byPct = customsValue * band.pct;
-        const byMin = volume * band.minPerCc;
+        const byPct = customsValue * band.pct, byMin = volume * band.minPerCc;
         duty = Math.max(byPct, byMin);
-        basis = `Авто до 3 лет: ${(band.pct*100).toFixed(0)}% (€${fmt(byPct)}), но не менее €${band.minPerCc}/см³ (€${fmt(byMin)}).`;
+        basis = `До 3 лет: ${(band.pct*100).toFixed(0)}% (€${fmt(byPct)}), но не менее €${band.minPerCc}/см³ (€${fmt(byMin)}).`;
     } else if (age <= 5) {
         const rate = pickRate(RATE_3_5, volume);
         duty = volume * rate;
-        basis = `Авто 3–5 лет: €${rate}/см³ × ${fmt(volume)} см³.`;
+        basis = `3–5 лет: €${rate}/см³ × ${fmt(volume)} см³.`;
     } else {
         const rate = pickRate(RATE_5PLUS, volume);
         duty = volume * rate;
-        basis = `Авто старше 5 лет: €${rate}/см³ × ${fmt(volume)} см³.`;
+        basis = `Старше 5 лет: €${rate}/см³ × ${fmt(volume)} см³.`;
     }
 
-    const clearance = parseFloat($('clearanceFee').value) || 0;
-    const util = parseFloat($('utilFee').value) || 0;
+    // ===== Сборы =====
+    // Утильсбор фиксированный в BYN, порог 3 года
+    const utilByn = age < 3 ? (parseFloat($('utilNew').value) || 0) : (parseFloat($('utilOld').value) || 0);
+    const util = utilByn / bynPerEur;
+    const clearance = (parseFloat($('clearanceFee').value) || 0) / bynPerEur;
     const other = parseFloat($('otherFee').value) || 0;
 
     const customsTotal = duty + clearance + util + other;
@@ -336,10 +308,8 @@ function calc() {
 
     // ===== Вывод =====
     $('wonHint').textContent = `≈ €${fmt(carEur)} · ${fmt(carEur*rubPerEur)} ₽`;
-
-    const ageY = Math.floor(age);
-    const ageM = Math.round((age - ageY) * 12);
-    let cat = age < 3 ? 'до 3 лет' : age <= 5 ? '3–5 лет' : 'старше 5 лет';
+    const ageY = Math.floor(age), ageM = Math.round((age - ageY) * 12);
+    const cat = age < 3 ? 'до 3 лет' : age <= 5 ? '3–5 лет' : 'старше 5 лет';
     $('ageHint').textContent = `Возраст: ${ageY} г ${ageM} мес — категория «${cat}»`;
 
     $('totalRub').textContent = fmt(grandEur * rubPerEur);
@@ -353,18 +323,40 @@ function calc() {
     $('dCustomsValue').textContent = `€${fmt(customsValue)}`;
     $('dDuty').textContent = `€${fmt(duty)}`;
     $('dClearance').textContent = `€${fmt(clearance)}`;
-    $('dUtil').textContent = `€${fmt(util)}`;
+    $('dUtil').textContent = `€${fmt(util)} (${fmt(utilByn,2)} BYN)`;
     $('dOther').textContent = `€${fmt(other)}`;
     $('dCustomsSum').textContent = `€${fmt(customsTotal)}`;
     $('dutyBasis').innerHTML = `<i class="fa-solid fa-calculator"></i> ${basis}`;
 }
 
+// ===== Загрузка курсов с открытого источника =====
+async function loadRates() {
+    const status = $('ratesStatus');
+    status.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-accent"></i> Загрузка курсов валют…';
+    try {
+        const res = await fetch('https://open.er-api.com/v6/latest/EUR', { cache: 'no-store' });
+        const data = await res.json();
+        if (data && data.result === 'success' && data.rates) {
+            if (data.rates.KRW) $('wonPerEur').value = Math.round(data.rates.KRW);
+            if (data.rates.RUB) $('rubPerEur').value = Math.round(data.rates.RUB * 100) / 100;
+            if (data.rates.BYN) $('bynPerEur').value = Math.round(data.rates.BYN * 1000) / 1000;
+            const upd = data.time_last_update_utc ? new Date(data.time_last_update_utc).toLocaleDateString('ru-RU') : '';
+            status.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-500"></i> Курсы загружены${upd ? ' · ' + upd : ''} · 1€ = ${fmt($('wonPerEur').value)}₩ / ${$('rubPerEur').value}₽ / ${$('bynPerEur').value} BYN`;
+        } else { throw new Error('bad response'); }
+    } catch (e) {
+        status.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-amber-500"></i> Не удалось загрузить — используются значения по умолчанию (можно ввести вручную)';
+    }
+    calc();
+}
+
 // Слушатели
 document.querySelectorAll('.fuel-btn').forEach(b => b.addEventListener('click', () => setFuel(b.dataset.fuel)));
 document.querySelectorAll('input, select').forEach(el => el.addEventListener('input', calc));
+$('refreshRates').addEventListener('click', loadRates);
 
 // Инициализация
 setFuel('petrol');
+loadRates();
 </script>
 </body>
 </html>
