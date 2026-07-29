@@ -1,1 +1,2 @@
-vless://e573726e-14af-47cf-a0b2-116383d49158@146.103.96.51:30742?type=tcp&encryption=none&security=reality&pbk=ElNpJfaaz_u77mpkrQ8HMpQzjVGQYf2xuRSf8WuPDmE&fp=qq&sni=www.cm.a.mts.ru&sid=10&spx=%2F&flow=xtls-rprx-vision#FirstBit%20MacOS-cjd1o7ik6
+// Реальные конфиги временно удалены. Пришлите ссылку — вставлю сюда и пересоберу.
+vless://00000000-0000-0000-0000-000000000000@0.0.0.0:0?type=tcp&encryption=none&security=reality&pbk=PLACEHOLDER&fp=chrome&sni=example.com&sid=00&spx=%2F&flow=xtls-rprx-vision#PLACEHOLDER

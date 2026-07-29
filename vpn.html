@@ -3,147 +3,30 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex">
-<title>Подписка V2Box</title>
+<meta name="robots" content="noindex, nofollow">
+<title>Недоступно</title>
 <style>
   :root { color-scheme: dark; }
-  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
   body {
-    margin: 0;
     background: #0b0f14;
     color: #e8eef5;
     font: 500 26px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    padding: 6vh 5vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 6vw;
   }
-  .wrap { max-width: 1100px; margin: 0 auto; }
-  h1 { font-size: clamp(34px, 5vw, 60px); margin: 0 0 8px; letter-spacing: -.02em; }
-  .lead { color: #9fb3c8; font-size: clamp(20px, 2.4vw, 30px); margin: 0 0 40px; }
-  .card {
-    background: #131a23;
-    border: 1px solid #223041;
-    border-radius: 18px;
-    padding: 28px 30px;
-    margin: 22px 0;
-  }
-  .tag {
-    display: inline-block;
-    font-size: clamp(15px, 1.6vw, 20px);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .08em;
-    color: #7ee0a8;
-    margin-bottom: 6px;
-  }
-  .tag.alt { color: #ffd166; }
-  .hint { color: #9fb3c8; font-size: clamp(16px, 1.8vw, 22px); margin: 2px 0 18px; }
-  .row { display: flex; gap: 16px; align-items: stretch; flex-wrap: wrap; }
-  .url {
-    flex: 1 1 380px;
-    min-width: 0;
-    background: #0b0f14;
-    border: 1px solid #2a3a4d;
-    border-radius: 12px;
-    padding: 18px 20px;
-    font: 600 clamp(17px, 1.9vw, 24px)/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    color: #cfe3f7;
-    word-break: break-all;
-    user-select: all;
-  }
-  button {
-    flex: 0 0 auto;
-    background: #2f6bff;
-    color: #fff;
-    border: 0;
-    border-radius: 12px;
-    padding: 0 30px;
-    font: 700 clamp(18px, 2vw, 26px)/1 system-ui, sans-serif;
-    cursor: pointer;
-    transition: background .15s, transform .05s;
-  }
-  button:hover { background: #4b81ff; }
-  button:active { transform: scale(.97); }
-  button.ok { background: #21a366; }
-  ol { color: #c3d3e3; font-size: clamp(18px, 2vw, 26px); padding-left: 1.3em; margin: 8px 0 0; }
-  ol li { margin: 10px 0; }
-  code {
-    background: #0b0f14;
-    border: 1px solid #2a3a4d;
-    border-radius: 8px;
-    padding: 2px 10px;
-    font: 600 .9em ui-monospace, Menlo, Consolas, monospace;
-    color: #ffd166;
-  }
-  .foot { color: #6b8199; font-size: clamp(14px, 1.5vw, 18px); margin-top: 34px; }
+  .box { max-width: 720px; }
+  h1 { font-size: clamp(32px, 6vw, 64px); margin: 0 0 16px; letter-spacing: -.02em; }
+  p { color: #9fb3c8; font-size: clamp(18px, 2.4vw, 28px); margin: 0; }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>Подписка V2Box</h1>
-  <p class="lead">Добавьте один из адресов ниже в V2Box как <b>Subscription</b>. Приложение само подтянет и обновит конфиги.</p>
-
-  <div class="card">
-    <span class="tag">Основная · base64</span>
-    <p class="hint">Стандартный формат подписки. Пробуйте первым.</p>
-    <div class="row">
-      <div class="url" id="subUrl"></div>
-      <button data-copy="subUrl">Копировать</button>
-    </div>
+  <div class="box">
+    <h1>Страница временно недоступна</h1>
+    <p>Подписка отключена. Загляните позже.</p>
   </div>
-
-  <div class="card">
-    <span class="tag alt">Фолбэк · plain text</span>
-    <p class="hint">Если основная не читается — часть сборок V2Box не парсит base64.</p>
-    <div class="row">
-      <div class="url" id="rawUrl"></div>
-      <button data-copy="rawUrl">Копировать</button>
-    </div>
-  </div>
-
-  <div class="card">
-    <span class="tag" style="color:#8ab4ff">Как подключить</span>
-    <ol>
-      <li>Откройте V2Box → вкладка <b>Config</b> → <b>+</b> → <b>Add Subscription</b>.</li>
-      <li>Вставьте скопированный адрес в поле <b>URL</b>, задайте любое имя.</li>
-      <li>Сохраните и нажмите обновление — конфиги появятся в списке.</li>
-    </ol>
-  </div>
-
-  <p class="foot" id="foot"></p>
-</div>
-
-<script>
-  // Адреса подписки строятся от текущего расположения страницы,
-  // поэтому работают и на github.io, и на любом зеркале. Сами ссылки
-  // vless/vmess/ss в разметке НЕ присутствуют — они только внутри sub.txt / raw.txt.
-  var base = location.href.replace(/[^/]*$/, '');
-  var subUrl = base + 'sub.txt';
-  var rawUrl = base + 'raw.txt';
-  document.getElementById('subUrl').textContent = subUrl;
-  document.getElementById('rawUrl').textContent = rawUrl;
-  document.getElementById('foot').textContent = 'Список серверов: ' + base + 'configs.txt (источник, редактируется вручную).';
-
-  function copy(text, btn) {
-    var done = function () {
-      var t = btn.textContent; btn.textContent = 'Скопировано ✓'; btn.classList.add('ok');
-      setTimeout(function () { btn.textContent = t; btn.classList.remove('ok'); }, 1500);
-    };
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
-    } else { fallback(text, done); }
-  }
-  function fallback(text, done) {
-    var ta = document.createElement('textarea');
-    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
-    document.body.appendChild(ta); ta.select();
-    try { document.execCommand('copy'); done(); } catch (e) {}
-    document.body.removeChild(ta);
-  }
-  var btns = document.querySelectorAll('button[data-copy]');
-  for (var i = 0; i < btns.length; i++) {
-    btns[i].addEventListener('click', function () {
-      copy(document.getElementById(this.getAttribute('data-copy')).textContent, this);
-    });
-  }
-</script>
 </body>
 </html>
