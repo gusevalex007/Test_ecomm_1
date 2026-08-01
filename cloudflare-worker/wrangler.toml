@@ -1,0 +1,13 @@
+name = "v2box-sub"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+# ВНИМАНИЕ: секреты сюда НЕ вписывать — этот файл в публичном репозитории.
+# Задать через CLI:
+#   wrangler secret put TOKEN
+#   wrangler secret put SUBSCRIPTION
+# или в дашборде: Workers & Pages -> проект -> Settings -> Variables and Secrets.
+#
+# ALLOWED_UA — необязательно, можно как обычную переменную (не секрет):
+# [vars]
+# ALLOWED_UA = "v2box"
